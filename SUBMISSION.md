@@ -232,6 +232,9 @@ Re-running the same command a second time (without deleting the API's
 data) returns the 9 as `duplicate_per_api` rather than double-posting —
 confirmed by an explicit test, see `README.md`.
 
+### Review UI
+<img width="1512" height="982" alt="Screenshot 2026-08-26 at 10 39 41 PM" src="https://github.com/user-attachments/assets/f52e2302-eb4e-4513-89a9-5e818070e723" />
+
 
 ## 7. Cost, limits, and risk in production
 
