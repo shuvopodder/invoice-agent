@@ -6,20 +6,26 @@ system's API — flagging anything it isn't confident about for a human
 instead of guessing.
 
 ## Run it Quickly
+Navigate to the project root directory using your terminal, command prompt, or an integrated terminal in an IDE (like VS Code), and execute the starter script:
 
 ```bash
 ./run.sh
 ```
-That starts the mock accounting API on `:8080`, runs the pipeline over
-every file in `invoices/`, prints a summary, dumps the full registered-
-invoice list from the API, and shuts the API back down when the script
-exits.
 
-Requires **Python 3.9+ and nothing else** to run as shown above — extraction
-uses cached, pre-extracted JSON in `data/extracted/` by default (see "Two
-modes" below), so no API key or `pip install` is needed for a demo run, ```run.sh``` install and do relevant installation like "anthropic", which require for vision llm invoice extraction.
+### What this script does:
+* **Starts the Mock API:** Boots up a local mock accounting API on `http://localhost:8080`.
+* **Processes Invoices:** Runs the ingestion pipeline over every document located in the `invoices/` directory.
+* **Displays Output:** Prints a processing summary and dumps the full registered-invoice dataset from the API database.
+* **Human Review UI:** Start preview on `http://localhost:8080` invoice review queue. Flagged invoices listed here and a real person can preview the details and resubmit to api-backend server.
+* **Automated Cleanup:** Gracefully shuts down the mock API server as soon as the execution loop finishes.
 
-*** Note: if ```./run.sh``` command not work properly or need extra permission please use the fix from end of this documents.
+### Prerequisites:
+* **Python 3.9+** is required.
+* **Zero Dependencies (Demo Mode):** The demo uses cached, pre-extracted JSON responses from `data/extracted/` by default. No `pip install` commands, external heavy libraries, or Anthropic LLM API keys are required for the initial demonstration run.
+* **Production Mode Setup:** The `run.sh` script automatically checks and installs necessary libraries like `anthropic` if you switch over to live vision LLM extraction/real ANTHROPIC_API_KEY is set on .env file.
+
+
+*** Note: if ```./run.sh``` command not work properly or need extra permission please use the troubleshooting fix from end of this documents.
 
 
 ## Run Seperately & Debug
@@ -95,6 +101,8 @@ mocking the LLM call itself.
 | `src/accounting_client.py` | stdlib HTTP client for the accounting API |
 | `src/partner_match.py` | supplier-name → partner_code matching |
 | `src/pipeline.py` | orchestrates the above end to end |
+| `src/review_server.py` | review UI backend |
+| `review_ui/index.html` | review UI frontend |
 | `data/extracted/*.json` | cached extraction fixtures (12 sample invoices) |
 | `data/review_queue/*.json` | invoices the pipeline declined to auto-register, with reasons |
 | `data/results.json` | full run log, written fresh each run |
@@ -109,7 +117,7 @@ live extraction instead of fixtures.
 
 
 
-## Debug & Fix
+## Troubleshooting
 
 ### environment and antropic installation
 
