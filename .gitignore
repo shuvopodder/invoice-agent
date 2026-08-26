@@ -6,5 +6,3 @@ data/results.json
 data/review_queue/*.json
 
 data/extracted/**
-invoices/**
-invoices copy/**

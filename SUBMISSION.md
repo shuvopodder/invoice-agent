@@ -82,7 +82,7 @@
   arbitrary number of pages beyond what a single vision-model context
   window can hold.
 
-- **Handle Exceptions.** i believe i could miss few exception to handle which need to handle in production safety and excellent user experiences. Real software debug & environment improve that fix.
+- **Handle Exceptions.** i believe i could miss few exceptions to handle which need to handle in production safety and excellent user experiences. Real software debug & environment improve that fix.
 
 
 ## 4. Design and technology choices
@@ -290,7 +290,7 @@ confirmed by an explicit test, see `README.md`.
    high-value invoices, running a second independent extraction pass to
    cross-check) would catch cases where the numbers happen to agree by
    coincidence despite a bad read.
-3. **Concurrency, retries, and a real audit log.** Sequential processing
+3. **Concurrency, retries, exception and a real audit log.** Sequential processing
    and an overwritten `results.json` are fine for 12 invoices and wrong
    for production. This item turns the demo into something that survives
    a month-end burst and actually answers "was anything registered
