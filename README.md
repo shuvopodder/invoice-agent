@@ -117,11 +117,45 @@ live extraction instead of fixtures.
 
 
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
-### Same port issue
+### Port Conflict Issues
+The application requires ports `8080` and `8090` to be free. If these ports are already in use by other services, you will encounter connection errors. You can resolve this by either freeing up the ports or changing the application configuration.
 
-Please ensure no other server application running on port :8080 & 8090 or make sure they are free to use. Otherwise need to change/update accounting_api.py and review_Server.py running ports.
+#### Option 1: Free up the ports
+
+Find and terminate the processes currently occupying the ports.
+
+**Windows (Command Prompt):**
+```cmd
+:: Find the process ID (PID)
+netstat -ano | findstr :8080
+netstat -ano | findstr :8090
+
+:: Kill the process (replace <PID> with the actual number found)
+taskkill /PID <PID> /F
+```
+
+**macOS / Linux (Terminal):**
+```bash
+# Find and kill the process running on port 8080
+kill -9 \$(lsof -t -i:8080)
+
+# Find and kill the process running on port 8090
+kill -9 \$(lsof -t -i:8090)
+```
+
+---
+
+#### Option 2: Change the application ports
+
+If you prefer to run the scripts on different ports, update the source code configuration:
+
+1. **`accounting_api.py`**: Locate the server startup logic (usually at the bottom of the file) and change `8080` to an open port (e.g., `8081`).
+2. **`review_server.py`**: Locate the startup logic and change `8090` to an open port (e.g., `8091`).
+
+*Note: If you change these ports, ensure you also update any API base URLs or environment variables pointing to these services.*
+
 
 
 ### environment and antropic installation
