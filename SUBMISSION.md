@@ -2,8 +2,11 @@
 
 - Name: Shuvo Podder
 - Submission date (YYYY-MM-DD): 2026-08-26
-- Hours actually spent: 9H (Approxmately: Friday~Tuesday 1 hour*5days + Today(3~5H) = 9H)
-- Repository / how to run it: `./run.sh` in project bash command. Check readme.md for more debug/run based on your os.
+- Hours actually spent:~9 Hours Total
+  - **Incremental Development (Fri–Tue):** ~4 hours (30 mins to 1 hour daily across 5 days for planning/setup)
+  - **Final Sprint & Testing (Wednesday):** 5 hours (Core pipeline execution and bug fixing)
+
+- Repository / how to run it: `./run.sh` in project terminal. Please review `README.md` for OS-specific troubleshooting and execution flags.
 
 ## 1. Understanding the request
 
@@ -277,7 +280,7 @@ confirmed by an explicit test, see `README.md`.
   
 ## 8. What you would do with another 8 hours
 
-1. **Improve human review screen.** Improve UI with more validation and UX support.
+1. **Improve human review screen.** Improve UI with more validation and UX support. Show accounting software health and relevant information for better software solutions.
 
 2. **Confidence-based routing using the model's own signal.** The schema
    already captures `extraction_confidence` and free-text `notes` from the
