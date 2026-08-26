@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+logs/*.log
+data/results.json
+data/review_queue/*.json
+
+invoices/**
+invoices copy/**
