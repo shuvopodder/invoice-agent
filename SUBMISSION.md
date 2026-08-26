@@ -2,13 +2,10 @@
 
 - Name: Shuvo Podder
 - Submission date (YYYY-MM-DD): 2026-08-26
-- Hours actually spent: 10h+ (Approxmately)
+- Hours actually spent: 9H (Approxmately: Friday~Tuesday 1 hour*5days + Today(3~5H) = 9H)
 - Repository / how to run it: `./run.sh` in project bash command. Check readme.md for more debug/run based on your os.
 
 ## 1. Understanding the request
-
-> Reading the client's email, what did you decide was the problem worth solving?
-> State both the problem the client described and the problem you actually set out to solve.
 
 > The client's email states the problem as data-entry speed: staff retype invoices by hand, month-end turns into overtime, and "AI can read invoices these days." Read literally, the ask is OCR-and-autofill.
 
@@ -18,10 +15,6 @@
 
 ## 2. What you would have asked the client
 
-> List the questions you wanted to ask, assuming you could not ask them.
-> For each one, state **the assumption you made instead of waiting for an answer**,
-> and why you made it. We are looking for questions paired with assumptions, not questions alone.
-
 | What you wanted to ask | The assumption you made | Why |
 |---|---|---|
 | If a supplier isn't in the accounting system's partner master yet, should we auto-create it or block? | Block and route to review; never create a partner record automatically. | Registering against the wrong or a freshly-invented supplier code is a worse failure than a delayed invoice — this is exactly the class of mistake the client is trying to eliminate, not introduce a new version of. |
@@ -30,10 +23,7 @@
 | What should happen with an invoice whose own printed numbers don't add up (a supplier-side arithmetic error, not an extraction error)? | Never "fix" it silently by trusting one field over another. Extract what's printed, let verification report the specific mismatch, and send it to review with the actual numbers so a human can call the supplier or accept the discrepancy. | This exact case exists in the sample set (`invoice_09.pdf`, off by ¥1) — see section 5. Auto-correcting would be inventing data; the API will reject a mismatched submission anyway, so silence isn't even an available option, only *how clearly* the reason surfaces. |
 
 
-## 3. Scoping decisions
-
-> This assignment does not fit in 8 hours. What did you include, what did you cut,
-> and why in that order?
+## 3. Scoping decisions 
 
 **What you built**
 
@@ -62,12 +52,8 @@
 
 **What you left out, and why**
 
-- **A human review UI.** The assignment calls this out as the top
-  differentiator, and it's the most obvious next step (section 8, #1) —
-  cut because the review queue's JSON output plus a documented reason is a
-  legitimate, if less polished, stand-in, and I judged verification
-  correctness and API integration correctness as higher value with the
-  time available than a UI on top of a possibly-wrong pipeline.
+- **Robust review UI.** I just build a simple ui for review doc shortly. UI could be more robust with better UX.
+
 - **Confidence-based routing using the model's own stated confidence.**
   `extraction_confidence` is captured in the schema and stored, but the
   pipeline currently gates only on my own deterministic checks (math
@@ -93,15 +79,11 @@
   arbitrary number of pages beyond what a single vision-model context
   window can hold.
 
-- **Handle Exceptions.** i believe i could miss few exception to handle which need to handle in production safety and excellent user experiences.
+- **Handle Exceptions.** i believe i could miss few exception to handle which need to handle in production safety and excellent user experiences. Real software debug & environment improve that fix.
 
 
 ## 4. Design and technology choices
 
-> Describe the flow end to end and why you chose your main components.
-> A diagram helps but is not required.
-> Say what you chose **and what you decided against**.
-> Include which LLM or OCR service you used and why — a free tier or local model is a valid answer.
 <img width="1693" height="929" alt="21e51662-366a-4619-b109-e71e93ee2815" src="https://github.com/user-attachments/assets/fbe3d8a7-5492-454a-9e1d-19fd1607bdf4" />
 
 ```
@@ -168,18 +150,6 @@ not at 12 sample invoices in an 8-hour budget.
 
 ## 5. How you used AI, and how you checked it
 
-> Which parts of the work did you hand to AI, and how did you instruct it?
-> Then: **where did you not trust the output**, and how did you check it?
-> We care more about the reasoning here than the implementation.
-
-**What you delegated to AI**
-
-**How you verified the output**
-
-**A case where the AI got it wrong** (one example is enough, if you have one)
-
-
-
 **What you delegated to AI:** In production, invoice reading itself is
 fully delegated to a vision LLM (`extract.py`) — that is the core of what
 was asked for. Within building this submission, I also used AI assistance
@@ -227,13 +197,6 @@ lines. `verify.py` catches this before the API call, reports the exact
 
 ## 6. Integrating with the accounting system
 
-> How did you handle the API's constraints?
-> If any invoice could not be registered, explain how your design handles it.
-
-| Invoice | Result | How you handled it |
-|---|---|---|
-|  |  |  |
-
 Handling summary: verify locally before ever calling the API (catches
 `AMOUNT_MISMATCH` and unresolved suppliers before a round trip);
 in-batch dedupe *and* rely on the API's own `DUPLICATE_INVOICE` as the
@@ -248,7 +211,7 @@ Actual result of running `./run.sh` once over all 12 sample invoices
 | Invoice | Result | How it was handled |
 |---|---|---|
 | invoice_01.pdf | Registered (`ACC-0001`) | clean extraction, single 10% rate |
-| invoice_02.pdf | Registered (`ACC-0002`) | 2-page PDF, 26 line items, all recomputed correctly |
+| invoice_02.pdf | Registered (`ACC-0002`) | 2-page PDF, 26 line items, was failed with first attempt but with some coding changes fix that issue, all recomputed correctly |
 | invoice_03.pdf | Registered (`ACC-0003`) | mixed 8%/10% tax, split per line, tax-by-code recomputation matched |
 | invoice_04.jpg | Registered (`ACC-0004`) | handwritten "received" stamp present but irrelevant to registered fields; ignored |
 | invoice_05.jpg | Registered (`ACC-0005`) | clean |
@@ -269,13 +232,6 @@ confirmed by an explicit test, see `README.md`.
 
 ## 7. Cost, limits, and risk in production
 
-> Rough numbers are fine, but show your reasoning.
-
-- **Cost per invoice** (and what makes it up):
-- **Monthly cost at 1,000 invoices per month**:
-- **Processing time per invoice**:
-- **Where this breaks first**:
-- **How you would find out if something was registered incorrectly**:
 - **Cost per invoice:** one vision-LLM call per invoice (image or PDF page
   + a fixed instruction prompt as input, structured JSON as output).
   Rough order of magnitude: ~1,500–2,500 input tokens (image + prompt),
@@ -284,6 +240,7 @@ confirmed by an explicit test, see `README.md`.
   invoice like `invoice_02.pdf` (26 lines across 2 pages) costs roughly
   proportionally more. Everything after extraction (normalize, verify,
   register) is local computation and effectively free.
+  *** note: cost may vary based on invoices type, size and complexity.
 - **Monthly cost at 1,000 invoices/month:** roughly **$15–25/month** in
   LLM cost at that per-invoice estimate, plus margin for retries on
   failed/low-confidence extractions (call it $25–35/month all in). This is
@@ -320,21 +277,8 @@ confirmed by an explicit test, see `README.md`.
   
 ## 8. What you would do with another 8 hours
 
-> Up to three items, in priority order, and why that order.
+1. **Improve human review screen.** Improve UI with more validation and UX support.
 
-1.
-2.
-
-3.
-1. **A human review screen.** The single highest-leverage gap: right now
-   `data/review_queue/*.json` is inspectable but not actionable without
-   reading JSON by hand. A minimal local web page — show the original
-   invoice image next to the extracted fields and the specific reason it
-   was flagged, let a human correct a field, re-run `verify.py`, and
-   submit — turns "the system tells you it's unsure" into "the system
-   gets fixed and finishes the job." This is the assignment's own
-   top-listed differentiator and the natural next step after everything
-   built so far.
 2. **Confidence-based routing using the model's own signal.** The schema
    already captures `extraction_confidence` and free-text `notes` from the
    model, but the pipeline doesn't act on them yet — only on my own

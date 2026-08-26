@@ -120,7 +120,7 @@ def _extract_live(file_path: str) -> dict:
 
     resp = client.messages.create(
         model=MODEL,
-        max_tokens=2000,
+        max_tokens=4000,
         messages=[{"role": "user", "content": content}],
     )
     text = "".join(b.text for b in resp.content if b.type == "text").strip()

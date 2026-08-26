@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invoice review queue</title>
+<style>
+  :root { --border: #d8dde3; --bg: #f7f8fa; --accent: #2563eb; --danger: #dc2626; --ok: #16a34a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; color: #1a1d21; background: #fff; }
+  header { padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; margin: 0; }
+  header p { margin: 0; color: #666; font-size: 13px; }
+  #layout { display: grid; grid-template-columns: 260px 1fr 1fr; height: calc(100vh - 53px); }
+  #queue-list { border-right: 1px solid var(--border); overflow-y: auto; background: var(--bg); }
+  .queue-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .queue-item:hover { background: #eef1f5; }
+  .queue-item.selected { background: #e0e9fc; border-left: 3px solid var(--accent); }
+  .queue-item .fname { font-weight: 600; }
+  .queue-item .reason { font-size: 12px; color: #b45309; margin-top: 4px; }
+  #doc-panel { border-right: 1px solid var(--border); overflow: auto; display: flex; align-items: flex-start; justify-content: center; background: #333; padding: 12px; }
+  #doc-panel img, #doc-panel embed { max-width: 100%; }
+  #form-panel { overflow-y: auto; padding: 16px 20px; }
+  #empty-state { padding: 60px 20px; text-align: center; color: #888; grid-column: 2 / span 2; }
+  .reasons { background: #fff7ed; border: 1px solid #fdba74; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; }
+  .reasons ul { margin: 6px 0 0; padding-left: 18px; }
+  label { display: block; font-size: 12px; color: #555; margin: 10px 0 3px; }
+  input, select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  table.lines { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  table.lines th { text-align: left; font-weight: 600; color: #555; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+  table.lines td { padding: 3px 4px; }
+  table.lines input { padding: 4px 6px; font-size: 12px; }
+  #totals-preview { margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+  #totals-preview.ok { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+  #totals-preview.bad { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+  .actions { margin-top: 18px; display: flex; gap: 10px; }
+  button { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.danger { background: #fff; color: var(--danger); border-color: var(--danger); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status-msg { margin-top: 12px; font-size: 13px; }
+  #status-msg.ok { color: var(--ok); } #status-msg.bad { color: var(--danger); }
+  .hint { font-size: 12px; color: #888; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Invoice review queue</h1>
+  <p>Invoices the pipeline flagged instead of auto-registering — read the reason, correct the field if needed, and register.</p>
+</header>
+
+<div id="layout">
+  <div id="queue-list"><div style="padding:16px;color:#888;">Loading…</div></div>
+  <div id="empty-state" style="display:none;">Select an item on the left, or the queue is empty — nothing needs review right now.</div>
+  <div id="doc-panel" style="display:none;"></div>
+  <div id="form-panel" style="display:none;"></div>
+</div>
+
+<script>
+const API = '';
+let currentItem = null;
+let currentName = null;
+let partners = [];
+
+async function loadPartners() {
+  try {
+    const r = await fetch(`${API}/api/partners`);
+    const j = await r.json();
+    partners = j.partners || [];
+  } catch (e) { partners = []; }
+}
+
+async function loadQueue() {
+  const r = await fetch(`${API}/api/queue`);
+  const j = await r.json();
+  const list = document.getElementById('queue-list');
+  if (j.items.length === 0) {
+    list.innerHTML = '<div style="padding:16px;color:#888;">Queue is empty.</div>';
+    document.getElementById('doc-panel').style.display = 'none';
+    document.getElementById('form-panel').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'block';
+    return;
+  }
+  list.innerHTML = '';
+  for (const item of j.items) {
+    const el = document.createElement('div');
+    el.className = 'queue-item' + (item.file === currentName ? ' selected' : '');
+    el.innerHTML = `<div class="fname">${item.file}</div><div class="reason">${item.reasons[0] || ''}${item.reasons.length > 1 ? ` (+${item.reasons.length - 1} more)` : ''}</div>`;
+    el.onclick = () => selectItem(item.file);
+    list.appendChild(el);
+  }
+}
+
+async function selectItem(fname) {
+  currentName = fname;
+  const stem = fname.replace(/\.[^.]+$/, '');
+  const r = await fetch(`${API}/api/queue/${stem}`);
+  currentItem = await r.json();
+  document.getElementById('empty-state').style.display = 'none';
+  renderDoc(fname);
+  renderForm(currentItem);
+  loadQueue(); // refresh selected highlight
+}
+
+function renderDoc(fname) {
+  const panel = document.getElementById('doc-panel');
+  panel.style.display = 'flex';
+  const url = `/invoices/${fname}`;
+  if (fname.toLowerCase().endsWith('.pdf')) {
+    panel.innerHTML = `<embed src="${url}" type="application/pdf" width="100%" height="900" />`;
+  } else {
+    panel.innerHTML = `<img src="${url}" alt="${fname}">`;
+  }
+}
+
+function partnerOptionsHtml(selectedCode) {
+  let html = `<option value="">-- no match --</option>`;
+  for (const p of partners) {
+    html += `<option value="${p.partner_code}" ${p.partner_code === selectedCode ? 'selected' : ''}>${p.name} (${p.partner_code})</option>`;
+  }
+  return html;
+}
+
+function renderForm(item) {
+  const panel = document.getElementById('form-panel');
+  panel.style.display = 'block';
+  const n = item.normalized || {};
+  const reasons = Array.isArray(item.detail) ? item.detail : [String(item.detail)];
+
+  const linesHtml = (n.lines || []).map((l, i) => `
+    <tr data-idx="${i}">
+      <td><input class="l-desc" value="${l.description || ''}"></td>
+      <td><input class="l-unit" value="${l.unit || ''}" style="width:60px"></td>
+      <td><input class="l-amount" type="number" value="${l.amount ?? ''}" style="width:90px"></td>
+      <td>
+        <select class="l-tax" style="width:70px">
+          <option value="T10" ${l.tax_code === 'T10' ? 'selected' : ''}>T10</option>
+          <option value="T08" ${l.tax_code === 'T08' ? 'selected' : ''}>T08</option>
+        </select>
+      </td>
+    </tr>`).join('');
+
+  panel.innerHTML = `
+    <div class="reasons">
+      <strong>Flagged because:</strong>
+      <ul>${reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label>Supplier (matched partner)</label>
+        <select id="f-partner">${partnerOptionsHtml(n.partner_code)}</select>
+        <div class="hint">As printed: ${item.extracted ? item.extracted.supplier_name_raw : ''}</div>
+      </div>
+      <div>
+        <label>Invoice number</label>
+        <input id="f-invnum" value="${n.invoice_number || ''}">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label>Issue date</label>
+        <input id="f-issue" type="date" value="${n.issue_date || ''}">
+        <div class="hint">As printed: ${item.extracted ? item.extracted.issue_date_raw : ''}</div>
+      </div>
+      <div>
+        <label>Due date</label>
+        <input id="f-due" type="date" value="${n.due_date || ''}">
+        <div class="hint">As printed: ${item.extracted ? item.extracted.due_date_raw : ''}</div>
+      </div>
+    </div>
+
+    <label>Line items</label>
+    <table class="lines">
+      <thead><tr><th>Description</th><th>Unit</th><th>Amount (¥)</th><th>Tax</th></tr></thead>
+      <tbody id="lines-body">${linesHtml}</tbody>
+    </table>
+
+    <div class="row2" style="margin-top:12px;">
+      <div>
+        <label>Subtotal (¥)</label>
+        <input id="f-subtotal" type="number" value="${n.subtotal ?? ''}">
+      </div>
+      <div>
+        <label>Tax amount (¥)</label>
+        <input id="f-tax" type="number" value="${n.tax_amount ?? ''}">
+      </div>
+    </div>
+    <label>Total amount (¥)</label>
+    <input id="f-total" type="number" value="${n.total_amount ?? ''}">
+
+    <div id="totals-preview"></div>
+
+    <div class="actions">
+      <button class="primary" id="btn-register">Re-verify &amp; register</button>
+      <button id="btn-recalc">Recalculate from lines</button>
+      <button class="danger" id="btn-dismiss">Dismiss (needs offline follow-up)</button>
+    </div>
+    <div id="status-msg"></div>
+  `;
+
+  document.getElementById('btn-register').onclick = doResubmit;
+  document.getElementById('btn-recalc').onclick = doRecalcPreview;
+  document.getElementById('btn-dismiss').onclick = doDismiss;
+  doRecalcPreview();
+}
+
+const TAX_RATES = { T10: 0.10, T08: 0.08 };
+
+function readFormPayload() {
+  const lines = [...document.querySelectorAll('#lines-body tr')].map(tr => ({
+    description: tr.querySelector('.l-desc').value,
+    unit: tr.querySelector('.l-unit').value,
+    amount: parseInt(tr.querySelector('.l-amount').value, 10),
+    tax_code: tr.querySelector('.l-tax').value,
+  }));
+  return {
+    currency: 'JPY',
+    partner_code: document.getElementById('f-partner').value || null,
+    invoice_number: document.getElementById('f-invnum').value,
+    issue_date: document.getElementById('f-issue').value,
+    due_date: document.getElementById('f-due').value,
+    lines,
+    subtotal: parseInt(document.getElementById('f-subtotal').value, 10),
+    tax_amount: parseInt(document.getElementById('f-tax').value, 10),
+    total_amount: parseInt(document.getElementById('f-total').value, 10),
+  };
+}
+
+// Client-side preview only, using the exact same rule verify.py uses
+// server-side (floor tax per code, sum). This is NOT the source of
+// truth -- it's a fast preview so a reviewer sees a problem before
+// clicking register, not a replacement for the server's own re-check.
+function doRecalcPreview() {
+  const p = readFormPayload();
+  const byCode = {};
+  for (const l of p.lines) byCode[l.tax_code] = (byCode[l.tax_code] || 0) + (l.amount || 0);
+  const expectedSubtotal = p.lines.reduce((s, l) => s + (l.amount || 0), 0);
+  let expectedTax = 0;
+  for (const [code, sub] of Object.entries(byCode)) expectedTax += Math.floor(sub * (TAX_RATES[code] || 0));
+  const expectedTotal = expectedSubtotal + expectedTax;
+
+  document.getElementById('f-subtotal').value = expectedSubtotal;
+  document.getElementById('f-tax').value = expectedTax;
+  document.getElementById('f-total').value = expectedTotal;
+
+  const box = document.getElementById('totals-preview');
+  box.className = 'ok';
+  box.textContent = `Recalculated from line items: subtotal ¥${expectedSubtotal.toLocaleString()}, tax ¥${expectedTax.toLocaleString()}, total ¥${expectedTotal.toLocaleString()}.`;
+}
+
+async function doResubmit() {
+  const payload = readFormPayload();
+  const statusEl = document.getElementById('status-msg');
+  statusEl.className = '';
+  statusEl.textContent = 'Submitting…';
+
+  const stem = currentName.replace(/\.[^.]+$/, '');
+  const r = await fetch(`${API}/api/queue/${stem}/resubmit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json();
+
+  if (j.registered) {
+    statusEl.className = 'ok';
+    statusEl.textContent = j.outcome === 'registered'
+      ? `Registered as ${j.detail.accounting_id}.`
+      : `Already registered per the accounting API (duplicate) — no action needed.`;
+    setTimeout(() => { currentName = null; document.getElementById('form-panel').style.display = 'none'; document.getElementById('doc-panel').style.display = 'none'; document.getElementById('empty-state').style.display = 'block'; loadQueue(); }, 1200);
+  } else {
+    statusEl.className = 'bad';
+    statusEl.textContent = 'Still not valid: ' + (j.issues || []).join(' / ');
+  }
+}
+
+async function doDismiss() {
+  const reason = prompt('Why dismiss this without registering? (e.g. "new supplier, adding to partner master separately")');
+  if (reason === null) return;
+  const stem = currentName.replace(/\.[^.]+$/, '');
+  await fetch(`${API}/api/queue/${stem}/dismiss`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+  currentName = null;
+  document.getElementById('form-panel').style.display = 'none';
+  document.getElementById('doc-panel').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'block';
+  loadQueue();
+}
+
+(async () => {
+  await loadPartners();
+  await loadQueue();
+})();
+</script>
+</body>
+</html>
