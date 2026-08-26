@@ -16,7 +16,7 @@ Navigate to the project root directory using your terminal, command prompt, or a
 * **Starts the Mock API:** Boots up a local mock accounting API on `http://localhost:8080`.
 * **Processes Invoices:** Runs the ingestion pipeline over every document located in the `invoices/` directory.
 * **Displays Output:** Prints a processing summary and dumps the full registered-invoice dataset from the API database.
-* **Human Review UI:** Start preview on `http://localhost:8080` invoice review queue. Flagged invoices listed here and Accounting staff can review flagged invoices, inspect validation findings, and manually approve resubmission..
+* **Human Review UI:** Start preview on `http://localhost:8090` invoice review queue. Flagged invoices listed here and Accounting staff can review flagged invoices, inspect validation findings, and manually approve resubmission..
 * **Automated Cleanup:** Gracefully shuts down the mock API server as soon as the execution loop finishes.
 
 ### Prerequisites:
